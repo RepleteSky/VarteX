@@ -2,7 +2,7 @@ seed_everything: 42
 
 # ---------------------------- TRAINER -------------------------------------------
 trainer:
-  default_root_dir: ${oc.env:OUTPUT_DIR,/home/ueyama/workspace/ClimaX/save_log/regional_forecast_climax_06_18}
+  default_root_dir: ${oc.env:OUTPUT_DIR,/home/ueyama/workspace/ClimaX/save_log/global_forecast_myclimax}
 
   precision: 16
 
@@ -10,7 +10,7 @@ trainer:
   num_nodes: 1
   accelerator: gpu
   strategy: ddp
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 8
 
   min_epochs: 1
   max_epochs: 100
@@ -75,7 +75,7 @@ model:
   pretrained_path: ""
 
   net:
-    class_path: climax.regional_forecast.arch.RegionalClimaX
+    class_path: climax.my_arch2.ClimaX2
     init_args:
       default_vars: [
           "land_sea_mask",
@@ -129,13 +129,15 @@ model:
         ]
       img_size: [32, 64]
       patch_size: 2
-      embed_dim: 1024
+      embed_dim: 2048
       depth: 8
       decoder_depth: 2
       num_heads: 16
+      num_representative: 4
       mlp_ratio: 4
       drop_path: 0.1
       drop_rate: 0.1
+      parallel_patch_embed: True
 
 # ---------------------------- DATA -------------------------------------------
 data:
@@ -191,10 +193,9 @@ data:
       "specific_humidity_925",
     ]
   out_variables: ["geopotential_500", "temperature_850", "2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind"]
-  region: "test_region_sub_wide"
   predict_range: 6
   hrs_each_step: 1
   buffer_size: 10000
-  batch_size: 32
+  batch_size: 16
   num_workers: 1
-  pin_memory: False
+  pin_memory: True

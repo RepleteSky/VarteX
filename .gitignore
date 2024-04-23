@@ -109,6 +109,12 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+dataset/
+pythonpath.txt
+sh/
+save_log/
+bu/
+
 
 # Spyder project settings
 .spyderproject

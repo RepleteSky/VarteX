@@ -85,6 +85,18 @@ BOUNDARIES = {
     'Global': { # 32, 64
         'lat_range': (-90, 90),
         'lon_range': (0, 360)
+    },
+    'test_region': {
+        'lat_range': (-20, 90),
+        'lon_range': (0, 200)
+    },
+    'test_region_wide': {
+        'lat_range': (-75 , 90),
+        'lon_range': (0, 343)
+    },
+    'test_region_sub_wide': {
+        'lat_range': (-43 , 90),
+        'lon_range': (0, 315)
     }
 }
 

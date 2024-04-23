@@ -8,9 +8,7 @@ import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 
-from climax.arch import ClimaX
-from climax.my_arch2 import ClimaX2
-from climax.my_arch3 import ClimaX3
+from climax.regional_forecast.arch import RegionalClimaX
 from climax.utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from climax.utils.metrics import (
     lat_weighted_acc,
@@ -21,8 +19,8 @@ from climax.utils.metrics import (
 from climax.utils.pos_embed import interpolate_pos_embed
 
 
-class GlobalForecastModule(LightningModule):
-    """Lightning module for global forecasting with the ClimaX model.
+class RegionalForecastModule(LightningModule):
+    """Lightning module for regional forecasting with the ClimaX model.
 
     Args:
         net (ClimaX): ClimaX model.
@@ -39,7 +37,7 @@ class GlobalForecastModule(LightningModule):
 
     def __init__(
         self,
-        net,
+        net: RegionalClimaX,
         pretrained_path: str = "",
         lr: float = 5e-4,
         beta_1: float = 0.9,
@@ -61,6 +59,7 @@ class GlobalForecastModule(LightningModule):
             checkpoint = torch.hub.load_state_dict_from_url(pretrained_path)
         else:
             checkpoint = torch.load(pretrained_path, map_location=torch.device("cpu"))
+
         print("Loading pre-trained checkpoint from: %s" % pretrained_path)
         checkpoint_model = checkpoint["state_dict"]
         # interpolate positional embedding
@@ -103,10 +102,15 @@ class GlobalForecastModule(LightningModule):
     def set_test_clim(self, clim):
         self.test_clim = clim
 
-    def training_step(self, batch: Any, batch_idx: int):
-        x, y, lead_times, variables, out_variables = batch
+    def get_patch_size(self):
+        return self.net.patch_size
 
-        loss_dict, _ = self.net.forward(x, y, lead_times, variables, out_variables, [lat_weighted_mse], lat=self.lat)
+    def training_step(self, batch: Any, batch_idx: int):
+        x, y, lead_times, variables, out_variables, region_info = batch
+
+        loss_dict, _ = self.net.forward(
+            x, y, lead_times, variables, out_variables, [lat_weighted_mse], lat=self.lat, region_info=region_info
+        )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
             self.log(
@@ -121,7 +125,7 @@ class GlobalForecastModule(LightningModule):
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int):
-        x, y, lead_times, variables, out_variables = batch
+        x, y, lead_times, variables, out_variables, region_info = batch
 
         if self.pred_range < 24:
             log_postfix = f"{self.pred_range}_hours"
@@ -140,6 +144,7 @@ class GlobalForecastModule(LightningModule):
             lat=self.lat,
             clim=self.val_clim,
             log_postfix=log_postfix,
+            region_info=region_info,
         )
 
         loss_dict = {}
@@ -159,7 +164,7 @@ class GlobalForecastModule(LightningModule):
         return loss_dict
 
     def test_step(self, batch: Any, batch_idx: int):
-        x, y, lead_times, variables, out_variables = batch
+        x, y, lead_times, variables, out_variables, region_info = batch
 
         if self.pred_range < 24:
             log_postfix = f"{self.pred_range}_hours"
@@ -178,6 +183,7 @@ class GlobalForecastModule(LightningModule):
             lat=self.lat,
             clim=self.test_clim,
             log_postfix=log_postfix,
+            region_info=region_info,
         )
 
         loss_dict = {}

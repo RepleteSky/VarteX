@@ -3,8 +3,8 @@
 
 import os
 
-from climax.regional_forecast.datamodule import RegionalForecastDataModule
-from climax.regional_forecast.module import RegionalForecastModule
+from climax.random_regional_forecast.datamodule import RandomRegionalForecastDataModule
+from climax.random_regional_forecast.module import RandomRegionalForecastModule
 from pytorch_lightning.cli import LightningCLI
 
 

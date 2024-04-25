@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 
 import numpy as np
+import random
 
 NAME_TO_VAR = {
     "2m_temperature": "t2m",
@@ -119,6 +120,45 @@ def get_region_info(region, lat, lon, patch_size):
     min_w, max_w = 1e5, -1e5
     for i in range(0, h, p):
         for j in range(0, w, p):
+            patch_idx += 1
+            if (i >= h_from) & (i + p - 1 <= h_to) & (j >= w_from) & (j + p - 1 <= w_to):
+                valid_patch_ids.append(patch_idx)
+                min_h = min(min_h, i)
+                max_h = max(max_h, i + p - 1)
+                min_w = min(min_w, j)
+                max_w = max(max_w, j + p - 1)
+    return {
+        'patch_ids': valid_patch_ids,
+        'min_h': min_h,
+        'max_h': max_h,
+        'min_w': min_w,
+        'max_w': max_w
+    }
+
+def get_random_region_info(lat, lon, crop_size, patch_size):
+    res_rows, res_cols = len(lat), len(lon)
+    crop_rows, crop_cols = crop_size[0], crop_size[1]
+    max_row_index = (res_rows - crop_rows) // patch_size
+    max_col_index = (res_cols - crop_cols) // patch_size
+
+    start_row = random.randint(0, max_row_index) * patch_size
+    start_col = random.randint(0, max_col_index) * patch_size
+
+    # 全体のグリッドを作成（初期値はFalse）
+    grid = np.full((res_rows, res_cols), False, dtype=bool)
+
+    # ランダムな位置にTrueの長方形を挿入
+    grid[start_row:start_row + crop_rows, start_col:start_col + crop_cols] = True
+    h_ids, w_ids = np.nonzero(grid)
+    h_from, h_to = h_ids[0], h_ids[-1]
+    w_from, w_to = w_ids[0], w_ids[-1]
+    patch_idx = -1
+    p = patch_size
+    valid_patch_ids = []
+    min_h, max_h = 1e5, -1e5
+    min_w, max_w = 1e5, -1e5
+    for i in range(0, res_rows, p):
+        for j in range(0, res_cols, p):
             patch_idx += 1
             if (i >= h_from) & (i + p - 1 <= h_to) & (j >= w_from) & (j + p - 1 <= w_to):
                 valid_patch_ids.append(patch_idx)

@@ -17,7 +17,7 @@ from climax.pretrain.dataset import (
     NpyReader,
     ShuffleIterableDataset,
 )
-from climax.utils.data_utils import get_region_info
+from climax.utils.data_utils import get_random_region_info
 
 
 def collate_fn_regional(batch):
@@ -37,7 +37,7 @@ def collate_fn_regional(batch):
     )
 
 
-class RegionalForecastDataModule(LightningDataModule):
+class RandomRegionalForecastDataModule(LightningDataModule):
     """DataModule for regional forecast data.
 
     Args:
@@ -59,7 +59,7 @@ class RegionalForecastDataModule(LightningDataModule):
         variables,
         buffer_size,
         out_variables=None,
-        region: str = 'NorthAmerica',
+        crop_size = (16, 32),
         predict_range: int = 6,
         hrs_each_step: int = 1,
         batch_size: int = 64,
@@ -70,6 +70,7 @@ class RegionalForecastDataModule(LightningDataModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters(logger=False)
+        self.crop_size = crop_size
 
         if isinstance(out_variables, str):
             out_variables = [out_variables]
@@ -123,7 +124,7 @@ class RegionalForecastDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         lat, lon = self.get_lat_lon()
-        region_info = get_region_info(self.hparams.region, lat, lon, self.patch_size)
+        region_info = get_random_region_info(lat, lon, self.crop_size, self.patch_size)
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
             self.data_train = ShuffleIterableDataset(

@@ -81,7 +81,10 @@ class Forecast(IterableDataset):
             y = np.concatenate([data[k].astype(np.float32) for k in out_variables], axis=1)
             y = torch.from_numpy(y)
 
-            inputs = x[: -self.max_predict_range]  # N, C, H, W
+            if self.max_predict_range == 0:
+                inputs = x  # N, C, H, W
+            else:
+                inputs = x[: -self.max_predict_range]  # N, C, H, W
 
             if self.random_lead_time:
                 predict_ranges = torch.randint(low=1, high=self.max_predict_range, size=(inputs.shape[0],))

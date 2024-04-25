@@ -8,7 +8,7 @@ import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 
-from climax.regional_forecast.arch import RegionalClimaX
+from climax.random_regional_forecast.arch import RandomRegionalClimaX
 from climax.utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from climax.utils.metrics import (
     lat_weighted_acc,
@@ -19,7 +19,7 @@ from climax.utils.metrics import (
 from climax.utils.pos_embed import interpolate_pos_embed
 
 
-class RegionalForecastModule(LightningModule):
+class RandomRegionalForecastModule(LightningModule):
     """Lightning module for regional forecasting with the ClimaX model.
 
     Args:
@@ -37,7 +37,7 @@ class RegionalForecastModule(LightningModule):
 
     def __init__(
         self,
-        net: RegionalClimaX,
+        net: RandomRegionalClimaX,
         pretrained_path: str = "",
         lr: float = 5e-4,
         beta_1: float = 0.9,

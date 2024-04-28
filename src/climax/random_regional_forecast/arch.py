@@ -5,8 +5,9 @@ import torch
 from climax.my_arch3 import ClimaX3
 
 class RandomRegionalClimaX(ClimaX3):
-    def __init__(self, default_vars, img_size=..., patch_size=2, embed_dim=1024, depth=8, decoder_depth=2, num_heads=16, num_representative=2, mlp_ratio=4, drop_path=0.1, drop_rate=0.1):
-        super().__init__(default_vars, img_size, patch_size, embed_dim, depth, decoder_depth, num_heads, num_representative, mlp_ratio, drop_path, drop_rate)
+    def __init__(self, default_vars, img_size=..., patch_size=2, embed_dim=1024, depth=8, decoder_depth=2, num_heads=16, num_representative=2, mlp_ratio=4, drop_path=0.1, drop_rate=0.1, parallel_patch_embed=False, delete_pexel_num=1):
+        super().__init__(default_vars, img_size, patch_size, embed_dim, depth, decoder_depth, num_heads, num_representative, mlp_ratio, drop_path, drop_rate, parallel_patch_embed)
+        self.delete_pexel_num = delete_pexel_num
 
     def forward_encoder(self, x0: torch.Tensor, lead_times: torch.Tensor, variables, region_info):
         # x: `[B, V, H, W]` shape.
@@ -67,7 +68,6 @@ class RandomRegionalClimaX(ClimaX3):
                 xs = torch.einsum("blrd->rbld", xs)
         return xs
 
-    # Done
     def forward(self, x, y, lead_times, variables, out_variables, metric, lat, region_info):
         """Forward pass through the model.
 
@@ -92,10 +92,10 @@ class RandomRegionalClimaX(ClimaX3):
         min_w, max_w = region_info['min_w'], region_info['max_w']
         preds = self.unpatchify(preds, h = max_h - min_h + 1, w = max_w - min_w + 1)
         out_var_ids = self.get_var_ids(tuple(out_variables), preds.device)
-        preds = preds[:, out_var_ids]
+        preds = preds[:, out_var_ids, self.delete_pexel_num:-self.delete_pexel_num, self.delete_pexel_num:-self.delete_pexel_num]
 
-        y = y[:, :, min_h:max_h+1, min_w:max_w+1]
-        lat = lat[min_h:max_h+1]
+        y = y[:, :, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
+        lat = lat[min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num]
 
         if metric is None:
             loss = None
@@ -104,14 +104,13 @@ class RandomRegionalClimaX(ClimaX3):
 
         return loss, preds
 
-    # Done
     def evaluate(self, x, y, lead_times, variables, out_variables, transform, metrics, lat, clim, log_postfix, region_info):
         _, preds = self.forward(x, y, lead_times, variables, out_variables, metric=None, lat=lat, region_info=region_info)
 
         min_h, max_h = region_info['min_h'], region_info['max_h']
         min_w, max_w = region_info['min_w'], region_info['max_w']
-        y = y[:, :, min_h:max_h+1, min_w:max_w+1]
-        lat = lat[min_h:max_h+1]
-        clim = clim[:, min_h:max_h+1, min_w:max_w+1]
+        y = y[:, :, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
+        lat = lat[min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num]
+        clim = clim[:, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
 
         return [m(preds, y, transform, out_variables, lat, clim, log_postfix) for m in metrics]

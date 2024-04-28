@@ -11,8 +11,8 @@ from pytorch_lightning.cli import LightningCLI
 def main():
     # Initialize Lightning with the model and data modules, and instruct it to parse the config yml
     cli = LightningCLI(
-        model_class=RegionalForecastModule,
-        datamodule_class=RegionalForecastDataModule,
+        model_class=RandomRegionalForecastModule,
+        datamodule_class=RandomRegionalForecastDataModule,
         seed_everything_default=42,
         save_config_overwrite=True,
         run=False,

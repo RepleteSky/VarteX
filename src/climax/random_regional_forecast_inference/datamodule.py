@@ -11,7 +11,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
 
-from climax.random_regional_forecast.dataset import (
+from climax.random_regional_forecast_inference.dataset import (
     Forecast,
     IndividualForecastDataIter,
     NpyReader,

@@ -49,6 +49,7 @@ class ClimaX3(nn.Module):
         drop_path=0.1,
         drop_rate=0.1,
         parallel_patch_embed=False,
+        is_used_pos_embed=False,
     ):
         super().__init__()
 
@@ -61,6 +62,7 @@ class ClimaX3(nn.Module):
         self.num_representatives = num_representative
         self.representative_dim = embed_dim // self.num_representatives
         self.depth = depth
+        self.is_used_pos_embed = is_used_pos_embed
         # variable tokenization: separate embedding layer for each input variable
         if self.parallel_patch_embed:
             self.token_embeds = ParallelVarPatchEmbed(len(default_vars), img_size, patch_size, self.representative_dim)
@@ -252,11 +254,15 @@ class ClimaX3(nn.Module):
             var_embed = self.get_var_emb(self.var_embed[k], variables)
             x = x + var_embed.unsqueeze(2)  # B, V, L, D
 
+            #### pos_embedのみで計算するため．上のxを消して次元を合わせる
+            #### x = x.repeat(32, 1, self.num_patches, 1)  # B, V, L, D
+
             # variable aggregation
             x = self.aggregate_variables(x, k)  # B, L, D
 
             # add pos embedding
-            x = x + self.pos_embed[k]
+            if self.is_used_pos_embed:
+                x = x + self.pos_embed[k]
 
             # add lead time embedding
             lead_time_emb = self.lead_time_embed(lead_times.unsqueeze(-1))  # B, D

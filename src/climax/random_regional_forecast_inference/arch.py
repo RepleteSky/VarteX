@@ -10,7 +10,7 @@ class RandomRegionalClimaX(ClimaX3):
         self.delete_pexel_num = delete_pexel_num
         self.is_used_pos_embed = is_used_pos_embed
 
-    def forward_encoder(self, x0: torch.Tensor, lead_times: torch.Tensor, variables, region_info):
+    def forward_encoder(self, x0: torch.Tensor, lead_times: torch.Tensor, variables, region_info, region_roop_num):
         # x: `[B, V, H, W]` shape.
 
         if isinstance(variables, list):
@@ -35,15 +35,14 @@ class RandomRegionalClimaX(ClimaX3):
             x = x + var_embed.unsqueeze(2)  # B, V, L, D
 
             # get the patch ids corresponding to the region
-            region_patch_ids = region_info['patch_ids']
-            x = x[:, :, region_patch_ids, :]
+            x = x[:, :, 4*region_roop_num:4*(region_roop_num+1), :]
 
             # variable aggregation
             x = self.aggregate_variables(x, k)  # B, L, D
 
             # add pos embedding
             if self.is_used_pos_embed:
-                x = x + self.pos_embed[k][:, region_patch_ids, :]
+                x = x + self.pos_embed[k][:, 4*region_roop_num:4*(region_roop_num+1), :]
 
             # add lead time embedding
             lead_time_emb = self.lead_time_embed(lead_times.unsqueeze(-1))  # B, D
@@ -83,24 +82,22 @@ class RandomRegionalClimaX(ClimaX3):
             loss (list): Different metrics.
             preds (torch.Tensor): `[B, Vo, H, W]` shape. Predicted weather/climate variables.
         """
-        out_transformers = self.forward_encoder(x, lead_times, variables, region_info)  # B, L, D
+        preds_list = []
+        for i in range(128):
+            out_transformers = self.forward_encoder(x, lead_times, variables, region_info, i)  # B, L, D
 
-        preds = []
-        for head, output in zip(self.heads, out_transformers):
-            preds.append(head(output))
-        preds = sum(preds)/len(preds)  # B, L, V*p*p
+            preds = []
+            for head, output in zip(self.heads, out_transformers):
+                preds.append(head(output))
+            preds = sum(preds)/len(preds)  # B, L, V*p*p
+            preds_list.append(preds)
 
-        min_h, max_h = region_info['min_h'], region_info['max_h']
-        min_w, max_w = region_info['min_w'], region_info['max_w']
-        preds = self.unpatchify(preds, h = max_h - min_h + 1, w = max_w - min_w + 1)
+        preds = torch.cat(preds_list, dim=1)
+
+        preds = self.unpatchify(preds)
         out_var_ids = self.get_var_ids(tuple(out_variables), preds.device)
-        if self.delete_pexel_num != 0:
-            preds = preds[:, out_var_ids, self.delete_pexel_num:-self.delete_pexel_num, self.delete_pexel_num:-self.delete_pexel_num]
-        else:
-            preds = preds[:, out_var_ids]
 
-        y = y[:, :, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
-        lat = lat[min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num]
+        preds = preds[:, out_var_ids]
 
         if metric is None:
             loss = None
@@ -111,11 +108,4 @@ class RandomRegionalClimaX(ClimaX3):
 
     def evaluate(self, x, y, lead_times, variables, out_variables, transform, metrics, lat, clim, log_postfix, region_info):
         _, preds = self.forward(x, y, lead_times, variables, out_variables, metric=None, lat=lat, region_info=region_info)
-
-        min_h, max_h = region_info['min_h'], region_info['max_h']
-        min_w, max_w = region_info['min_w'], region_info['max_w']
-        y = y[:, :, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
-        lat = lat[min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num]
-        clim = clim[:, min_h+self.delete_pexel_num:max_h+1-self.delete_pexel_num, min_w+self.delete_pexel_num:max_w+1-self.delete_pexel_num]
-
         return [m(preds, y, transform, out_variables, lat, clim, log_postfix) for m in metrics]

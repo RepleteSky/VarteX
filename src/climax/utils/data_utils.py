@@ -98,7 +98,23 @@ BOUNDARIES = {
     'test_region_sub_wide': {
         'lat_range': (-43 , 90),
         'lon_range': (0, 315)
-    }
+    },
+    "lt_region": {
+        'lat_range': (0, 90),
+        'lon_range': (0, 180)
+    },
+    "rt_region": {
+        'lat_range': (0, 90),
+        'lon_range': (180, 360)
+    },
+    "lb_region": {
+        'lat_range': (-90, 0),
+        'lon_range': (0, 180)
+    },
+    "rb_region": {
+        'lat_range': (-90, 0),
+        'lon_range': (180, 360)
+    },
 }
 
 def get_region_info(region, lat, lon, patch_size):

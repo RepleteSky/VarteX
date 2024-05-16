@@ -114,6 +114,8 @@ pythonpath.txt
 sh/
 save_log/
 bu/
+bu_savelog/
+pretraining_weight/
 
 
 # Spyder project settings
